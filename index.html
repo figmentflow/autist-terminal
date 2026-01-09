@@ -1,0 +1,1938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AUTIST TERMINAL</title>
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #fff;
+            line-height: 1.4;
+            font-size: 12px;
+        }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"] { -moz-appearance: textfield; }
+        input[type="date"] { color: #fff; width: 140px !important; }
+        input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
+        .header {
+            position: fixed; top: 0; left: 0; right: 0; height: 40px;
+            background: #000; border-bottom: 1px solid #fff;
+            display: flex; align-items: center; padding: 0 15px; z-index: 1000;
+        }
+        .menu-icon { width: 20px; height: 20px; cursor: pointer; display: flex; flex-direction: column; justify-content: space-around; }
+        .menu-icon span { display: block; height: 1px; background: #fff; }
+        .sidebar {
+            position: fixed; top: 40px; left: -200px; width: 200px;
+            height: calc(100vh - 40px); background: #000; border-right: 1px solid #fff;
+            transition: left 0.3s; z-index: 999;
+        }
+        .sidebar.open { left: 0; }
+        .nav-item { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #333; color: #fff; }
+        .nav-item:hover { background: #111; }
+        .nav-item.active { background: #333; }
+        .main { margin-top: 40px; padding: 15px; max-width: 1400px; margin-left: auto; margin-right: auto; }
+        .page { display: none; }
+        .page.active { display: block; }
+        .time-filter { display: flex; gap: 5px; margin-bottom: 15px; justify-content: flex-end; }
+        .filter-btn {
+            background: #000; color: #fff; border: 1px solid #fff;
+            padding: 5px 15px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 10px;
+        }
+        .filter-btn.active { background: #fff; color: #000; }
+        .stats-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px;
+            margin-bottom: 15px; background: #fff; border: 1px solid #fff;
+        }
+        .stat-box { background: #000; padding: 12px; text-align: center; cursor: pointer; }
+        .stat-box:hover { background: #111; }
+        .stat-label { color: #888; font-size: 9px; margin-bottom: 3px; }
+        .stat-value { color: #fff; font-size: 18px; font-weight: bold; }
+        .stat-meta { font-size: 8px; color: #888; margin-top: 3px; }
+        .chart-box { background: #000; border: 1px solid #fff; padding: 15px; margin-bottom: 15px; }
+        .chart-title { color: #fff; font-size: 11px; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        .form-box { background: #000; border: 1px solid #fff; padding: 15px; margin-bottom: 15px; }
+        .form-section { margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #222; }
+        .section-title {
+            color: #fff; font-size: 11px; font-weight: bold; margin-bottom: 10px;
+            display: inline-block; border-bottom: 2px solid #fff; padding-bottom: 3px;
+        }
+        .form-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+        .form-field { flex: 0 0 auto; }
+        .form-field.small { width: 140px; }
+        .form-field.medium { width: 200px; }
+        .form-field.full { width: 100%; }
+        label { display: block; font-size: 8px; color: #888; margin-bottom: 3px; }
+        input, select, textarea {
+            width: 100%; background: #000; border: 1px solid #fff; color: #fff;
+            padding: 6px 8px; font-family: 'Courier New', monospace; font-size: 11px;
+        }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: #888; }
+        textarea { resize: vertical; min-height: 60px; }
+        button {
+            background: #fff; color: #000; border: none; padding: 8px 16px;
+            cursor: pointer; font-family: 'Courier New', monospace; font-size: 11px; font-weight: bold;
+        }
+        button:hover { background: #ccc; }
+        .btn-secondary { background: #000; color: #fff; border: 1px solid #fff; }
+        .btn-draft { background: #333; color: #fff; border: 1px solid #666; }
+        .btn-danger { background: #000; color: #f00; border: 1px solid #f00; }
+        #tradeList { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+        .period-header { grid-column: 1 / -1; }
+        .trade-card {
+            background: #000; border: 1px solid #fff; padding: 12px;
+            cursor: pointer; position: relative; max-width: 400px;
+        }
+        .trade-card:hover { background: #111; }
+        .trade-card.win { border-left: 4px solid #0f0; }
+        .trade-card.loss { border-left: 4px solid #f00; }
+        .trade-card.breakeven { border-left: 4px solid #888; }
+        .trade-card.draft { border-left: 4px solid #ff0; opacity: 0.8; }
+        .trade-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .trade-ticker { font-size: 16px; font-weight: bold; }
+        .trade-meta { display: flex; gap: 10px; font-size: 10px; color: #888; flex-wrap: wrap; }
+        .trade-details { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid #333; font-size: 10px; }
+        .trade-card.expanded .trade-details { display: block; }
+        .trade-card.expanded { grid-column: 1 / -1; max-width: 100%; }
+        .detail-row { margin-bottom: 6px; }
+        .detail-label { color: #888; }
+        .detail-value { color: #fff; }
+        .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+        .tag {
+            background: #000; border: 1px solid #fff; padding: 4px 10px;
+            font-size: 9px; cursor: pointer;
+        }
+        .tag:hover { background: #111; }
+        .tag.selected { background: #fff; color: #000; }
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.95); z-index: 2000; padding: 50px; overflow-y: auto;
+        }
+        .modal.active { display: block; }
+        .modal-content { max-width: 800px; margin: 0 auto; background: #000; border: 2px solid #fff; padding: 20px; }
+        .modal-header { display: flex; justify-content: space-between; margin-bottom: 20px; border-bottom: 2px solid #fff; padding-bottom: 10px; }
+        input[type="range"] { -webkit-appearance: none; width: 100%; height: 6px; background: #333; margin: 10px 0; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; background: #fff; border-radius: 50%; cursor: pointer; }
+        .range-display { text-align: center; font-size: 14px; font-weight: bold; }
+        .ticker-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+        .ticker-box {
+            background: #000; border: 2px solid #fff; padding: 10px 15px;
+            cursor: pointer; font-weight: bold; min-width: 80px; text-align: center;
+            transition: all 0.2s;
+        }
+        .ticker-box.positive { border-color: #0f0; color: #0f0; }
+        .ticker-box.negative { border-color: #f00; color: #f00; }
+        .ticker-box .ticker-details {
+            display: none; margin-top: 8px; padding-top: 8px;
+            border-top: 1px solid #333; font-size: 9px; text-align: left;
+            font-weight: normal; color: #fff;
+        }
+        .ticker-box.expanded .ticker-details { display: block; }
+        .ticker-box.expanded { min-width: 140px; }
+        .insight { background: #000; border-left: 3px solid #fff; padding: 10px; margin-bottom: 10px; }
+        .insight-title { font-weight: bold; margin-bottom: 5px; font-size: 11px; }
+        .insight-text { font-size: 10px; color: #888; }
+        .ratio-ring { width: 50px; height: 50px; position: relative; margin: 0 auto; }
+        .ratio-ring svg { transform: rotate(-90deg); }
+        .ratio-ring-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 10px; font-weight: bold; white-space: nowrap; }
+        .stat-box.clickable { cursor: pointer; }
+        .stat-box.clickable:hover { background: #222; }
+        #chartContainer { width: 100%; height: 220px; position: relative; }
+        canvas { display: block; }
+        .chart-tooltip {
+            position: absolute; background: rgba(0,0,0,0.9); border: 1px solid #fff;
+            padding: 8px; font-size: 10px; pointer-events: none; display: none; z-index: 100;
+        }
+        /* Weekly Journal Styles */
+        .week-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .delete-week-btn { background: #000; color: #f00; border: 1px solid #f00; padding: 5px 10px; cursor: pointer; }
+        .day-toggle { border: 1px solid #333; margin-bottom: 5px; }
+        .day-header {
+            padding: 10px 15px; cursor: pointer; background: #111;
+            font-weight: bold; font-size: 11px;
+        }
+        .day-header:hover { background: #222; }
+        .day-content { display: none; padding: 10px 15px; }
+        .day-toggle.open .day-content { display: block; }
+        .period-header { background: #111; padding: 8px 12px; margin: 15px 0 10px 0; font-weight: bold; font-size: 11px; }
+        @media (max-width: 800px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="menu-icon" onclick="toggleMenu()"><span></span><span></span><span></span></div>
+        <span style="margin-left: 15px;">AUTIST TERMINAL</span>
+        <div style="margin-left: auto; display: flex; gap: 10px; align-items: center;">
+            <select id="accountSelector" onchange="switchAccount()" style="background:#000;color:#fff;border:1px solid #fff;padding:5px;font-family:'Courier New',monospace;font-size:10px;">
+                <option value="default">ACCOUNT 1</option>
+            </select>
+            <button onclick="showAccountModal()">MANAGE</button>
+        </div>
+    </div>
+
+    <div class="sidebar" id="sidebar">
+        <div class="nav-item active" onclick="showPage('dashboard', this)">DASHBOARD</div>
+        <div class="nav-item" onclick="showPage('trades', this)">TRADES</div>
+        <div class="nav-item" onclick="showPage('weekly', this)">WEEKLY</div>
+        <div class="nav-item" onclick="showPage('analytics', this)">ANALYTICS</div>
+    </div>
+
+    <div id="accountModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>ACCOUNT MANAGEMENT</h2>
+                <button onclick="closeAccountModal()">CLOSE</button>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <label>CREATE NEW ACCOUNT</label>
+                <div style="display:flex;gap:10px;margin-top:5px;">
+                    <input type="text" id="newAccountName" placeholder="Account Name" style="flex:1;">
+                    <input type="number" id="newAccountBalance" placeholder="Balance" style="width:120px;">
+                    <button type="button" onclick="createAccount()">CREATE</button>
+                </div>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <label>UPDATE CURRENT ACCOUNT BALANCE</label>
+                <div style="display:flex;gap:10px;margin-top:5px;">
+                    <input type="number" id="updateBalance" placeholder="New Balance" style="flex:1;">
+                    <button type="button" onclick="updateAccountBalance()">UPDATE</button>
+                </div>
+            </div>
+            <div id="accountList"></div>
+        </div>
+    </div>
+
+    <div class="main">
+        <!-- DASHBOARD -->
+        <div id="dashboard" class="page active">
+            <div class="time-filter">
+                <button class="filter-btn active" onclick="setFilter('all', this)">OVERALL</button>
+                <button class="filter-btn" onclick="setFilter('quarter', this)">QUARTER</button>
+                <button class="filter-btn" onclick="setFilter('month', this)">MONTH</button>
+                <button class="filter-btn" onclick="setFilter('week', this)">WEEK</button>
+            </div>
+            <div class="stats-grid" id="statsGrid"></div>
+            <div class="chart-box">
+                <div class="chart-title">EQUITY CURVE</div>
+                <div id="chartContainer"><canvas id="equityChart"></canvas><div class="chart-tooltip" id="chartTooltip"></div></div>
+            </div>
+            <div class="chart-box">
+                <div class="chart-title">SYSTEM ANALYSIS</div>
+                <div id="insightsContainer"></div>
+            </div>
+            <div class="chart-box">
+                <div class="chart-title">TICKER PERFORMANCE</div>
+                <div id="tickerGrid" class="ticker-grid"></div>
+            </div>
+        </div>
+
+        <!-- TRADES -->
+        <div id="trades" class="page">
+            <div style="display:flex;justify-content:space-between;margin-bottom:15px;">
+                <h2>TRADE JOURNAL</h2>
+                <button onclick="showTradeForm()">+ NEW TRADE</button>
+            </div>
+
+            <div id="tradeForm" class="form-box" style="display:none;">
+                <h3 style="margin-bottom:15px;">NEW TRADE ENTRY</h3>
+                <input type="hidden" id="editTradeId">
+
+                <div class="form-section">
+                    <div class="section-title">TRADE DETAILS</div>
+                    <div class="form-row">
+                        <div class="form-field small"><label>ACCOUNT</label><select id="tradeAccount"></select></div>
+                        <div class="form-field small"><label>PAIR</label><input type="text" id="pair" placeholder="BTC/USD"></div>
+                        <div class="form-field small"><label>DIRECTION</label><select id="direction"><option>LONG</option><option>SHORT</option></select></div>
+                        <div class="form-field small"><label>ENTRY TIME</label><input type="date" id="entryTime"></div>
+                        <div class="form-field small"><label>EXIT TIME</label><input type="date" id="exitTime"></div>
+                        <div class="form-field small"><label>OUTCOME</label><select id="outcome" onchange="updateMAEMFEDisplay()"><option value="">--</option><option>WIN</option><option>LOSS</option><option>BREAKEVEN</option></select></div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="section-title">RISK & RETURNS</div>
+                    <div class="form-row">
+                        <div class="form-field small"><label>RISK USD</label><input type="number" id="riskAmount" placeholder="100" oninput="calcReturns()"></div>
+                        <div class="form-field small"><label>INITIAL RR</label><input type="text" id="initialRR" placeholder="3:1"></div>
+                        <div class="form-field small"><label>ACTUAL R</label><input type="number" step="0.01" id="actualR" placeholder="1.5" oninput="calcFromR()"></div>
+                        <div class="form-field small"><label>PNL USD</label><input type="number" id="pnlDollar" placeholder="150" oninput="calcFromPnl()"></div>
+                        <div class="form-field small"><label>PNL %</label><input type="text" id="pnlPercent" readonly style="background:#111;"></div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="section-title">SETUP</div>
+                    <div class="form-row">
+                        <div class="form-field small"><label>GRADE</label><select id="setupGrade"><option>A</option><option>B</option><option>C</option><option>D</option><option>F</option></select></div>
+                        <div class="form-field medium"><label>CHART IMAGE</label><input type="file" id="chartImage" accept="image/*"></div>
+                    </div>
+                    <div class="form-field full"><label>REASONING</label><textarea id="reasoning" placeholder="Why did you take this trade?"></textarea></div>
+                </div>
+
+                <div class="form-section">
+                    <div class="section-title">MAE / MFE</div>
+                    <div class="form-row">
+                        <div class="form-field small"><label>ENTRY PRICE</label><input type="number" step="0.01" id="entryPrice" oninput="calcMAE()"></div>
+                        <div class="form-field small"><label>STOP PRICE</label><input type="number" step="0.01" id="stopPrice" oninput="calcMAE()"></div>
+                        <div class="form-field small" id="worstPriceField"><label>WORST PRICE</label><input type="number" step="0.01" id="worstPrice" oninput="calcMAE()"></div>
+                        <div class="form-field small" id="bestPriceField"><label>BEST PRICE</label><input type="number" step="0.01" id="bestPrice" oninput="calcMAE()"></div>
+                    </div>
+                    <div style="display:flex;gap:15px;margin-top:8px;">
+                        <div id="maeDisplay" style="flex:1;padding:10px;background:#111;text-align:center;">
+                            <div style="font-size:9px;color:#888;margin-bottom:3px;">MAE (Max Adverse)</div>
+                            <div id="maeValue" style="font-size:16px;font-weight:bold;">--</div>
+                        </div>
+                        <div id="mfeDisplay" style="flex:1;padding:10px;background:#111;text-align:center;">
+                            <div style="font-size:9px;color:#888;margin-bottom:3px;">MFE (Max Favorable)</div>
+                            <div id="mfeValue" style="font-size:16px;font-weight:bold;">--</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="section-title">IF DID NOTHING</div>
+                    <div class="form-field full"><label>OUTCOME IF HELD</label><textarea id="didNothing" placeholder="What would have happened if you didn't exit?"></textarea></div>
+                </div>
+
+                <div class="form-section">
+                    <div class="section-title">DEMON FINDER</div>
+                    <div class="tags" id="demonTags">
+                        <div class="tag" onclick="toggleTag(this)">BET TOO SMALL</div>
+                        <div class="tag" onclick="toggleTag(this)">ENTERED TOO SOON</div>
+                        <div class="tag" onclick="toggleTag(this)">ENTERED TOO LATE</div>
+                        <div class="tag" onclick="toggleTag(this)">EXITED TOO LATE</div>
+                        <div class="tag" onclick="toggleTag(this)">BET TOO LARGE</div>
+                        <div class="tag" onclick="toggleTag(this)">EXITED TOO SOON</div>
+                        <div class="tag" onclick="toggleTag(this)">WRONG BIAS</div>
+                        <div class="tag" onclick="toggleTag(this)">NOT IN SYSTEM</div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="section-title">EXIT PLAN PRE-ENTRY</div>
+                    <div class="form-field full"><label>STRATEGY</label><textarea id="exitPlan" placeholder="What was your exit plan before entering?"></textarea></div>
+                </div>
+
+                <div class="form-section">
+                    <div class="section-title">PROCESS</div>
+                    <div class="form-field medium">
+                        <label>SCORE 1-10</label>
+                        <input type="range" min="1" max="10" value="5" id="processScore" oninput="updateSlider(this, 'processVal')">
+                        <div class="range-display" id="processVal">5</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-field small"><label>FOLLOWED PLAN</label><select id="followedPlan"><option>YES</option><option>PARTIAL</option><option>NO</option></select></div>
+                    </div>
+                    <div class="form-field full"><label>WHAT WENT WRONG</label><textarea id="wrongAction"></textarea></div>
+                    <div class="form-field full"><label>CAUSE OF NEGATIVE</label><textarea id="negCause"></textarea></div>
+                    <div class="form-field full"><label>IMPROVEMENT</label><textarea id="improvement"></textarea></div>
+                </div>
+
+                <div class="form-section">
+                    <div class="section-title">CONVICTION JOURNAL</div>
+                    <div class="form-field medium">
+                        <label>SCORE 1-5</label>
+                        <input type="range" min="1" max="5" value="3" id="convictionScore" oninput="updateSlider(this, 'convictionVal')">
+                        <div class="range-display" id="convictionVal">3</div>
+                    </div>
+                    <div class="form-field full"><label>TRUST FACTORS</label><textarea id="trustFactors" placeholder="What made you trust this setup?"></textarea></div>
+                    <div class="form-field medium"><label>EMOTIONS PRESENT</label><input type="text" id="emotionsPresent"></div>
+                </div>
+
+                <div class="form-section">
+                    <div class="section-title">EMOTIONS</div>
+                    <div class="form-field full">
+                        <label>BEFORE</label>
+                        <div class="tags" id="emotionsBefore">
+                            <div class="tag" onclick="toggleTag(this)">CALM</div>
+                            <div class="tag" onclick="toggleTag(this)">CONFIDENT</div>
+                            <div class="tag" onclick="toggleTag(this)">FOMO</div>
+                            <div class="tag" onclick="toggleTag(this)">FEAR</div>
+                            <div class="tag" onclick="toggleTag(this)">GREED</div>
+                            <div class="tag" onclick="toggleTag(this)">UNCERTAIN</div>
+                        </div>
+                    </div>
+                    <div class="form-field full">
+                        <label>DURING</label>
+                        <div class="tags" id="emotionsDuring">
+                            <div class="tag" onclick="toggleTag(this)">CALM</div>
+                            <div class="tag" onclick="toggleTag(this)">ANXIOUS</div>
+                            <div class="tag" onclick="toggleTag(this)">GREEDY</div>
+                            <div class="tag" onclick="toggleTag(this)">FEARFUL</div>
+                            <div class="tag" onclick="toggleTag(this)">CONFIDENT</div>
+                        </div>
+                    </div>
+                    <div class="form-field full">
+                        <label>AFTER</label>
+                        <div class="tags" id="emotionsAfter">
+                            <div class="tag" onclick="toggleTag(this)">SATISFIED</div>
+                            <div class="tag" onclick="toggleTag(this)">REGRET</div>
+                            <div class="tag" onclick="toggleTag(this)">RELIEF</div>
+                            <div class="tag" onclick="toggleTag(this)">FRUSTRATED</div>
+                            <div class="tag" onclick="toggleTag(this)">PROUD</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="section-title">POST TRADE</div>
+                    <div class="form-field full"><label>AFTER EXIT</label><textarea id="afterExit" placeholder="What happened after you exited?"></textarea></div>
+                    <div class="form-row">
+                        <div class="form-field small"><label>EXIT LOGICAL</label><select id="exitLogical"><option>YES</option><option>NO</option></select></div>
+                    </div>
+                    <div class="form-field full"><label>MANAGE DIFFERENT</label><textarea id="manageDifferent" placeholder="How would you manage this trade differently?"></textarea></div>
+                </div>
+
+                <div style="display:flex;gap:8px;margin-top:15px;">
+                    <button type="button" onclick="saveTrade(false)">SAVE</button>
+                    <button type="button" class="btn-draft" onclick="saveTrade(true)">SAVE DRAFT</button>
+                    <button type="button" class="btn-secondary" onclick="hideTradeForm()">CANCEL</button>
+                </div>
+            </div>
+
+            <div id="tradeList"></div>
+        </div>
+
+        <!-- WEEKLY -->
+        <div id="weekly" class="page">
+            <div style="display:flex;justify-content:space-between;margin-bottom:15px;">
+                <h2>WEEKLY JOURNAL</h2>
+                <button onclick="addWeekEntry()">+ NEW WEEK</button>
+            </div>
+            <div id="weeklyList"></div>
+        </div>
+
+        <!-- ANALYTICS -->
+        <div id="analytics" class="page">
+            <h2>ANALYTICS</h2>
+            <div class="chart-box">
+                <div class="chart-title">COMING SOON</div>
+                <p style="color:#888;padding:20px;">Advanced analytics will be added here.</p>
+            </div>
+        </div>
+    </div>
+
+<script>
+// ========== SUPABASE CONFIG ==========
+const SUPABASE_URL = 'https://pfxjzrngtxeztljnerzz.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBmeGp6cm5ndHhlenRsam5lcnp6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc5OTYxNjMsImV4cCI6MjA4MzU3MjE2M30.v-Wxh6sH_wc8KUVuBzneLx0bKkvq1QTrdd7Bs7JU7XM';
+
+let supabaseClient = null;
+let useSupabase = false;
+
+// Try to initialize Supabase
+try {
+    if (window.supabase && window.supabase.createClient) {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        useSupabase = true;
+        console.log('Supabase client initialized');
+    }
+} catch (e) {
+    console.warn('Supabase init failed, using localStorage only:', e);
+    useSupabase = false;
+}
+
+// ========== DATA ==========
+let accounts = {};
+let currentAccount = 'default';
+let trades = [];
+let weeklyEntries = [];
+let currentFilter = 'all';
+let chartPoints = [];
+let isLoading = false;
+let isSavingTrade = false;
+
+// ========== INIT ==========
+async function init() {
+    try {
+        showLoadingOverlay('LOADING DATA...');
+        await loadData();
+    } catch (e) {
+        console.error('Init error:', e);
+        loadFromLocalStorage();
+    } finally {
+        updateAccountSelector();
+        updateTradeAccountSelector();
+        updateDashboard();
+        renderTrades();
+        renderWeekly();
+        hideLoadingOverlay();
+        console.log('Terminal initialized');
+    }
+}
+
+function showLoadingOverlay(msg) {
+    let overlay = document.getElementById('loadingOverlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'loadingOverlay';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);z-index:9999;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;';
+        document.body.appendChild(overlay);
+    }
+    overlay.innerHTML = msg || 'LOADING...';
+    overlay.style.display = 'flex';
+}
+
+function hideLoadingOverlay() {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) overlay.style.display = 'none';
+}
+
+async function loadData() {
+    // If Supabase isn't available, use localStorage
+    if (!useSupabase || !supabaseClient) {
+        console.log('Using localStorage (Supabase not available)');
+        loadFromLocalStorage();
+        return;
+    }
+
+    try {
+        // Load accounts
+        const { data: accountsData, error: accErr } = await supabaseClient
+            .from('accounts')
+            .select('*');
+
+        if (accErr) throw accErr;
+
+        accounts = {};
+        if (accountsData && accountsData.length > 0) {
+            accountsData.forEach(acc => {
+                accounts[acc.id] = { name: acc.name, balance: parseFloat(acc.balance), trades: [] };
+            });
+        } else {
+            // Create default account if none exists
+            accounts = { 'default': { name: 'ACCOUNT 1', balance: 10000, trades: [] } };
+            await supabaseClient.from('accounts').insert({ id: 'default', name: 'ACCOUNT 1', balance: 10000 });
+        }
+
+        // Load trades
+        const { data: tradesData, error: trErr } = await supabaseClient
+            .from('trades')
+            .select('*');
+
+        if (trErr) throw trErr;
+
+        if (tradesData) {
+            tradesData.forEach(t => {
+                const trade = dbToTrade(t);
+                if (accounts[trade.account]) {
+                    accounts[trade.account].trades.push(trade);
+                }
+            });
+        }
+
+        // Load weekly entries
+        const { data: weeklyData, error: wkErr } = await supabaseClient
+            .from('weekly_entries')
+            .select('*')
+            .order('week_of', { ascending: false });
+
+        if (wkErr) throw wkErr;
+        weeklyEntries = weeklyData ? weeklyData.map(dbToWeekly) : [];
+
+        // Load current account preference
+        const { data: prefData } = await supabaseClient
+            .from('user_preferences')
+            .select('current_account')
+            .eq('id', 1)
+            .maybeSingle();
+
+        if (!prefData) {
+            // seed default preference row if missing
+            await supabaseClient.from('user_preferences').upsert({ id: 1, current_account: 'default' });
+            currentAccount = 'default';
+        } else {
+            currentAccount = prefData.current_account || 'default';
+        }
+        if (!accounts[currentAccount]) currentAccount = 'default';
+
+        trades = accounts[currentAccount]?.trades || [];
+
+    } catch (e) {
+        console.error('Supabase load error:', e);
+        // Fallback to localStorage if Supabase fails
+        console.log('Falling back to localStorage...');
+        loadFromLocalStorage();
+    }
+}
+
+function loadFromLocalStorage() {
+    try {
+        const saved = localStorage.getItem('terminal_data');
+        if (saved) {
+            const data = JSON.parse(saved);
+            accounts = data.accounts || { 'default': { name: 'ACCOUNT 1', balance: 10000, trades: [] } };
+            weeklyEntries = data.weeklyEntries || [];
+            currentAccount = data.currentAccount || 'default';
+        } else {
+            accounts = { 'default': { name: 'ACCOUNT 1', balance: 10000, trades: [] } };
+        }
+        trades = accounts[currentAccount]?.trades || [];
+    } catch (e) {
+        console.error('localStorage load error:', e);
+        accounts = { 'default': { name: 'ACCOUNT 1', balance: 10000, trades: [] } };
+        trades = [];
+    }
+}
+
+// Convert database row to trade object
+function dbToTrade(row) {
+    return {
+        id: row.id,
+        account: row.account_id,
+        isDraft: row.is_draft,
+        pair: row.pair,
+        direction: row.direction,
+        entryTime: row.entry_time,
+        exitTime: row.exit_time,
+        outcome: row.outcome,
+        riskAmount: parseFloat(row.risk_amount) || 0,
+        initialRR: row.initial_rr,
+        actualR: parseFloat(row.actual_r) || 0,
+        pnlDollar: parseFloat(row.pnl_dollar) || 0,
+        pnlPercent: row.pnl_percent,
+        setupGrade: row.setup_grade,
+        reasoning: row.reasoning,
+        entryPrice: parseFloat(row.entry_price) || 0,
+        stopPrice: parseFloat(row.stop_price) || 0,
+        worstPrice: row.worst_price,
+        bestPrice: row.best_price,
+        didNothing: row.did_nothing,
+        demonTags: row.demon_tags || [],
+        exitPlan: row.exit_plan,
+        processScore: row.process_score,
+        followedPlan: row.followed_plan,
+        wrongAction: row.wrong_action,
+        negCause: row.neg_cause,
+        improvement: row.improvement,
+        convictionScore: row.conviction_score,
+        trustFactors: row.trust_factors,
+        emotionsPresent: row.emotions_present,
+        emotionsBefore: row.emotions_before || [],
+        emotionsDuring: row.emotions_during || [],
+        emotionsAfter: row.emotions_after || [],
+        afterExit: row.after_exit,
+        exitLogical: row.exit_logical,
+        manageDifferent: row.manage_different
+    };
+}
+
+function toNumOrNull(v) {
+    if (v === undefined || v === null) return null;
+    if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+    const s = String(v).trim();
+    if (s === '' || s.toLowerCase() === 'na' || s === '--') return null;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : null;
+}
+
+// Convert trade object to database row
+function tradeToDb(trade) {
+    return {
+        id: trade.id,
+        account_id: trade.account,
+        is_draft: trade.isDraft,
+        pair: trade.pair,
+        direction: trade.direction,
+        entry_time: trade.entryTime || null,
+        exit_time: trade.exitTime || null,
+        outcome: trade.outcome,
+        risk_amount: toNumOrNull(trade.riskAmount),
+        initial_rr: trade.initialRR,
+        actual_r: toNumOrNull(trade.actualR),
+        pnl_dollar: toNumOrNull(trade.pnlDollar),
+        pnl_percent: trade.pnlPercent,
+        setup_grade: trade.setupGrade,
+        reasoning: trade.reasoning,
+        entry_price: toNumOrNull(trade.entryPrice),
+        stop_price: toNumOrNull(trade.stopPrice),
+        worst_price: toNumOrNull(trade.worstPrice),
+        best_price: toNumOrNull(trade.bestPrice),
+        did_nothing: trade.didNothing,
+        demon_tags: trade.demonTags || [],
+        exit_plan: trade.exitPlan,
+        process_score: trade.processScore,
+        followed_plan: trade.followedPlan,
+        wrong_action: trade.wrongAction,
+        neg_cause: trade.negCause,
+        improvement: trade.improvement,
+        conviction_score: trade.convictionScore,
+        trust_factors: trade.trustFactors,
+        emotions_present: trade.emotionsPresent,
+        emotions_before: trade.emotionsBefore || [],
+        emotions_during: trade.emotionsDuring || [],
+        emotions_after: trade.emotionsAfter || [],
+        after_exit: trade.afterExit,
+        exit_logical: trade.exitLogical,
+        manage_different: trade.manageDifferent
+    };
+}
+
+// Convert database row to weekly entry
+function dbToWeekly(row) {
+    return {
+        id: row.id,
+        weekOf: row.week_of,
+        days: row.days || {},
+        bias: row.bias || {}
+    };
+}
+
+// Convert weekly entry to database row
+function weeklyToDb(entry) {
+    return {
+        id: entry.id,
+        week_of: entry.weekOf,
+        days: entry.days,
+        bias: entry.bias || {}
+    };
+}
+
+async function saveData() {
+    try {
+        // Always save to localStorage as backup
+        accounts[currentAccount].trades = trades;
+        localStorage.setItem('terminal_data', JSON.stringify({
+            accounts, weeklyEntries, currentAccount
+        }));
+
+        // Save current account preference to Supabase if available
+        if (useSupabase && supabaseClient) {
+            await supabaseClient
+                .from('user_preferences')
+                .upsert({ id: 1, current_account: currentAccount });
+        }
+    } catch (e) {
+        console.error('Save error:', e);
+    }
+}
+
+async function saveTradeToDb(trade) {
+    if (!useSupabase || !supabaseClient) return;
+    try {
+        const { error } = await supabaseClient
+            .from('trades')
+            .upsert(tradeToDb(trade));
+        if (error) throw error;
+    } catch (e) {
+        console.error('Error saving trade to Supabase:', e);
+    }
+}
+
+async function deleteTradeFromDb(tradeId) {
+    if (!useSupabase || !supabaseClient) return;
+    try {
+        const { error } = await supabaseClient
+            .from('trades')
+            .delete()
+            .eq('id', tradeId);
+        if (error) throw error;
+    } catch (e) {
+        console.error('Error deleting trade from Supabase:', e);
+    }
+}
+
+async function saveAccountToDb(id, account) {
+    if (!useSupabase || !supabaseClient) return;
+    try {
+        const { error } = await supabaseClient
+            .from('accounts')
+            .upsert({ id, name: account.name, balance: account.balance });
+        if (error) throw error;
+    } catch (e) {
+        console.error('Error saving account to Supabase:', e);
+    }
+}
+
+async function deleteAccountFromDb(id) {
+    if (!useSupabase || !supabaseClient) return;
+    try {
+        const { error } = await supabaseClient
+            .from('accounts')
+            .delete()
+            .eq('id', id);
+        if (error) throw error;
+    } catch (e) {
+        console.error('Error deleting account from Supabase:', e);
+    }
+}
+
+async function saveWeeklyToDb(entry) {
+    if (!useSupabase || !supabaseClient) return;
+    try {
+        const { error } = await supabaseClient
+            .from('weekly_entries')
+            .upsert(weeklyToDb(entry));
+        if (error) throw error;
+    } catch (e) {
+        console.error('Error saving weekly to Supabase:', e);
+    }
+}
+
+async function deleteWeeklyFromDb(id) {
+    if (!useSupabase || !supabaseClient) return;
+    try {
+        const { error } = await supabaseClient
+            .from('weekly_entries')
+            .delete()
+            .eq('id', id);
+        if (error) throw error;
+    } catch (e) {
+        console.error('Error deleting weekly from Supabase:', e);
+    }
+}
+
+// ========== NAV ==========
+function toggleMenu() { document.getElementById('sidebar').classList.toggle('open'); }
+
+function showPage(id, el) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    if (el) el.classList.add('active');
+    document.getElementById('sidebar').classList.remove('open');
+    if (id === 'dashboard') updateDashboard();
+    if (id === 'trades') renderTrades();
+    if (id === 'weekly') renderWeekly();
+}
+
+// ========== ACCOUNTS ==========
+function showAccountModal() { document.getElementById('accountModal').classList.add('active'); renderAccountList(); }
+function closeAccountModal() { document.getElementById('accountModal').classList.remove('active'); }
+
+function updateAccountSelector() {
+    const sel = document.getElementById('accountSelector');
+    sel.innerHTML = Object.entries(accounts).map(([id, acc]) =>
+        `<option value="${id}" ${id === currentAccount ? 'selected' : ''}>${acc.name}</option>`
+    ).join('');
+}
+
+function updateTradeAccountSelector() {
+    const sel = document.getElementById('tradeAccount');
+    if (sel) {
+        sel.innerHTML = Object.entries(accounts).map(([id, acc]) =>
+            `<option value="${id}" ${id === currentAccount ? 'selected' : ''}>${acc.name}</option>`
+        ).join('');
+    }
+}
+
+function switchAccount() {
+    currentAccount = document.getElementById('accountSelector').value;
+    trades = accounts[currentAccount]?.trades || [];
+    saveData();
+    updateTradeAccountSelector();
+    updateDashboard();
+    renderTrades();
+}
+
+async function createAccount() {
+    const name = document.getElementById('newAccountName').value.trim();
+    const balance = parseFloat(document.getElementById('newAccountBalance').value) || 10000;
+    if (!name) { alert('Enter account name'); return; }
+    const id = 'acc_' + Date.now();
+    accounts[id] = { name, balance, trades: [] };
+    await saveAccountToDb(id, accounts[id]);
+    saveData();
+    updateAccountSelector();
+    updateTradeAccountSelector();
+    renderAccountList();
+    document.getElementById('newAccountName').value = '';
+    document.getElementById('newAccountBalance').value = '';
+    alert('Account created: ' + name);
+}
+
+async function updateAccountBalance() {
+    const balance = parseFloat(document.getElementById('updateBalance').value);
+    if (!balance || balance <= 0) { alert('Enter valid balance'); return; }
+    accounts[currentAccount].balance = balance;
+    await saveAccountToDb(currentAccount, accounts[currentAccount]);
+    saveData();
+    updateDashboard();
+    renderAccountList();
+    document.getElementById('updateBalance').value = '';
+    alert('Balance updated to $' + balance);
+}
+
+async function deleteAccount(id) {
+    if (id === 'default') { alert('Cannot delete default account'); return; }
+    if (!confirm('Delete this account?')) return;
+    await deleteAccountFromDb(id);
+    delete accounts[id];
+    if (currentAccount === id) { currentAccount = 'default'; trades = accounts[currentAccount].trades; }
+    saveData();
+    updateAccountSelector();
+    updateTradeAccountSelector();
+    renderAccountList();
+    updateDashboard();
+}
+
+function renderAccountList() {
+    document.getElementById('accountList').innerHTML = '<h3 style="margin-bottom:10px;">ACCOUNTS</h3>' +
+        Object.entries(accounts).map(([id, acc]) => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border:1px solid #333;margin-bottom:5px;">
+                <span><strong>${acc.name}</strong> - $${acc.balance.toLocaleString()} - ${acc.trades.length} trades</span>
+                ${id !== 'default' ? `<button class="btn-danger" onclick="deleteAccount('${id}')">DELETE</button>` : ''}
+            </div>
+        `).join('');
+}
+
+// ========== TRADES ==========
+function showTradeForm() {
+    document.getElementById('tradeForm').style.display = 'block';
+    clearTradeForm();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function hideTradeForm() { document.getElementById('tradeForm').style.display = 'none'; }
+
+function clearTradeForm() {
+    document.getElementById('editTradeId').value = '';
+    ['pair','entryTime','exitTime','riskAmount','initialRR','actualR','pnlDollar','pnlPercent',
+     'reasoning','entryPrice','stopPrice','worstPrice','bestPrice','didNothing','exitPlan',
+     'wrongAction','negCause','improvement','trustFactors','emotionsPresent','afterExit','manageDifferent'
+    ].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+    document.getElementById('direction').value = 'LONG';
+    document.getElementById('outcome').value = '';
+    document.getElementById('setupGrade').value = 'A';
+    document.getElementById('followedPlan').value = 'YES';
+    document.getElementById('exitLogical').value = 'YES';
+    document.getElementById('processScore').value = 5;
+    document.getElementById('processVal').innerText = '5';
+    document.getElementById('convictionScore').value = 3;
+    document.getElementById('convictionVal').innerText = '3';
+    document.getElementById('maeValue').innerHTML = '--';
+    document.getElementById('mfeValue').innerHTML = '--';
+    document.getElementById('worstPriceField').style.opacity = '1';
+    document.getElementById('bestPriceField').style.opacity = '1';
+    document.getElementById('worstPrice').disabled = false;
+    document.getElementById('bestPrice').disabled = false;
+    document.querySelectorAll('.tag.selected').forEach(t => t.classList.remove('selected'));
+    updateTradeAccountSelector();
+}
+
+function toggleTag(el) { el.classList.toggle('selected'); }
+function getSelectedTags(id) { return Array.from(document.querySelectorAll(`#${id} .tag.selected`)).map(t => t.textContent); }
+function updateSlider(el, valId) { document.getElementById(valId).innerText = el.value; }
+
+function drawRatioRing(pct, label) {
+    const circumference = 2 * Math.PI * 18;
+    const offset = circumference - (pct / 100) * circumference;
+    return `
+        <div class="ratio-ring">
+            <svg width="50" height="50">
+                <circle cx="25" cy="25" r="18" fill="none" stroke="#333" stroke-width="5"/>
+                <circle cx="25" cy="25" r="18" fill="none" stroke="#888" stroke-width="5"
+                    stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"/>
+            </svg>
+            <div class="ratio-ring-text">${pct}%<span style="font-size:9px;">${label}</span></div>
+        </div>
+    `;
+}
+
+function showFactorRateModal() {
+    const trades = window.currentFilteredTrades || [];
+    if (trades.length === 0) {
+        alert('No trades to display. Add some trades first.');
+        return;
+    }
+
+    const sorted = [...trades].sort((a, b) => (b.actualR || 0) - (a.actualR || 0));
+
+    let html = `
+        <div class="modal active" id="factorRateModal" onclick="if(event.target===this)closeFactorRateModal()">
+            <div class="modal-content" style="max-width:600px;">
+                <div class="modal-header">
+                    <h2>FACTOR RATE BREAKDOWN</h2>
+                    <button onclick="closeFactorRateModal()">CLOSE</button>
+                </div>
+                <div style="max-height:60vh;overflow-y:auto;">
+                    <table style="width:100%;border-collapse:collapse;font-size:11px;">
+                        <thead>
+                            <tr style="border-bottom:1px solid #fff;text-align:left;">
+                                <th style="padding:8px;">DATE</th>
+                                <th style="padding:8px;">TICKER</th>
+                                <th style="padding:8px;">DIR</th>
+                                <th style="padding:8px;">R</th>
+                                <th style="padding:8px;">P/L</th>
+                                <th style="padding:8px;">OUTCOME</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+    `;
+
+    sorted.forEach(t => {
+        const date = t.exitTime || t.entryTime || '--';
+        const ticker = (t.pair || '').split('/')[0] || '--';
+        const r = t.actualR || 0;
+        const rColor = r >= 0 ? '#0f0' : '#f00';
+        const outcomeColor = t.outcome === 'WIN' ? '#0f0' : t.outcome === 'LOSS' ? '#f00' : '#888';
+        html += `
+            <tr style="border-bottom:1px solid #333;">
+                <td style="padding:8px;">${date}</td>
+                <td style="padding:8px;font-weight:bold;">${ticker}</td>
+                <td style="padding:8px;">${t.direction || '--'}</td>
+                <td style="padding:8px;color:${rColor};font-weight:bold;">${r >= 0 ? '+' : ''}${r.toFixed(2)}R</td>
+                <td style="padding:8px;color:${rColor};">${(t.pnlDollar || 0) >= 0 ? '+' : ''}$${(t.pnlDollar || 0).toFixed(0)}</td>
+                <td style="padding:8px;color:${outcomeColor};">${t.outcome || '--'}</td>
+            </tr>
+        `;
+    });
+
+    const avgR = (sorted.reduce((s, t) => s + (t.actualR || 0), 0) / sorted.length).toFixed(2);
+    const totalR = sorted.reduce((s, t) => s + (t.actualR || 0), 0).toFixed(2);
+
+    html += `
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top:15px;padding-top:15px;border-top:1px solid #fff;display:flex;gap:30px;">
+                    <div><span style="color:#888;">AVG R:</span> <strong>${avgR}R</strong></div>
+                    <div><span style="color:#888;">TOTAL R:</span> <strong>${totalR}R</strong></div>
+                    <div><span style="color:#888;">TRADES:</span> <strong>${sorted.length}</strong></div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function closeFactorRateModal() {
+    const modal = document.getElementById('factorRateModal');
+    if (modal) modal.remove();
+}
+
+function calcFromR() {
+    const risk = parseFloat(document.getElementById('riskAmount').value) || 0;
+    const r = parseFloat(document.getElementById('actualR').value) || 0;
+    if (risk > 0) {
+        const pnl = (risk * r).toFixed(2);
+        document.getElementById('pnlDollar').value = pnl;
+        const bal = accounts[currentAccount]?.balance || 10000;
+        document.getElementById('pnlPercent').value = ((pnl / bal) * 100).toFixed(2) + '%';
+    }
+}
+
+function calcFromPnl() {
+    const risk = parseFloat(document.getElementById('riskAmount').value) || 0;
+    const pnl = parseFloat(document.getElementById('pnlDollar').value) || 0;
+    if (risk > 0) {
+        document.getElementById('actualR').value = (pnl / risk).toFixed(2);
+        const bal = accounts[currentAccount]?.balance || 10000;
+        document.getElementById('pnlPercent').value = ((pnl / bal) * 100).toFixed(2) + '%';
+    }
+}
+
+function calcReturns() { calcFromR(); }
+
+function updateMAEMFEDisplay() {
+    const outcome = document.getElementById('outcome').value;
+    const maeValue = document.getElementById('maeValue');
+    const mfeValue = document.getElementById('mfeValue');
+    const worstField = document.getElementById('worstPriceField');
+    const bestField = document.getElementById('bestPriceField');
+
+    // LOSS = MAE shows NA (you hit your stop, no adverse excursion to measure)
+    // WIN = MFE shows NA (you captured the move, no unrealized favorable to measure)
+    if (outcome === 'LOSS') {
+        maeValue.innerHTML = '<span style="color:#fff;">NA</span>';
+        maeValue.title = 'Not applicable for losing trades - stop was hit';
+        worstField.style.opacity = '0.4';
+        document.getElementById('worstPrice').disabled = true;
+        // Enable MFE for losses
+        bestField.style.opacity = '1';
+        document.getElementById('bestPrice').disabled = false;
+    } else if (outcome === 'WIN') {
+        mfeValue.innerHTML = '<span style="color:#fff;">NA</span>';
+        mfeValue.title = 'Not applicable for winning trades - move was captured';
+        bestField.style.opacity = '0.4';
+        document.getElementById('bestPrice').disabled = true;
+        // Enable MAE for wins
+        worstField.style.opacity = '1';
+        document.getElementById('worstPrice').disabled = false;
+    } else {
+        // BREAKEVEN or unset - enable both
+        worstField.style.opacity = '1';
+        bestField.style.opacity = '1';
+        document.getElementById('worstPrice').disabled = false;
+        document.getElementById('bestPrice').disabled = false;
+        maeValue.innerHTML = '--';
+        mfeValue.innerHTML = '--';
+    }
+
+    calcMAE(); // Recalculate with new outcome
+}
+
+function calcMAE() {
+    const entry = parseFloat(document.getElementById('entryPrice').value);
+    const stop = parseFloat(document.getElementById('stopPrice').value);
+    const worst = parseFloat(document.getElementById('worstPrice').value);
+    const best = parseFloat(document.getElementById('bestPrice').value);
+    const dir = document.getElementById('direction').value;
+    const outcome = document.getElementById('outcome').value;
+
+    const maeValue = document.getElementById('maeValue');
+    const mfeValue = document.getElementById('mfeValue');
+
+    // MAE calculation - only for WIN/BREAKEVEN (not LOSS)
+    if (outcome === 'LOSS') {
+        maeValue.innerHTML = '<span style="color:#fff;">NA</span>';
+    } else if (entry && stop && worst) {
+        const stopDist = Math.abs(entry - stop);
+        let worstDist = dir === 'LONG' ? entry - worst : worst - entry;
+        if (stopDist > 0) {
+            const mae = ((worstDist / stopDist) * 100).toFixed(1);
+            const color = mae > 80 ? '#f00' : mae > 50 ? '#ff0' : '#0f0';
+            maeValue.innerHTML = `<span style="color:${color};">${mae}%</span>`;
+        }
+    } else {
+        maeValue.innerHTML = '--';
+    }
+
+    // MFE calculation - only for LOSS/BREAKEVEN (not WIN)
+    if (outcome === 'WIN') {
+        mfeValue.innerHTML = '<span style="color:#fff;">NA</span>';
+    } else if (entry && stop && best) {
+        const stopDist = Math.abs(entry - stop);
+        let bestDist = dir === 'LONG' ? best - entry : entry - best;
+        if (stopDist > 0) {
+            const mfe = ((bestDist / stopDist) * 100).toFixed(1);
+            const color = mfe > 200 ? '#0f0' : mfe > 100 ? '#ff0' : '#888';
+            mfeValue.innerHTML = `<span style="color:${color};">${mfe}%</span>`;
+        }
+    } else if (outcome !== 'WIN') {
+        mfeValue.innerHTML = '--';
+    }
+}
+
+async function saveTrade(isDraft) {
+    if (isSavingTrade) return;
+    isSavingTrade = true;
+    try {
+    const pair = document.getElementById('pair').value.trim();
+    if (!pair) { alert('Enter trading pair'); return; }
+
+    const editId = document.getElementById('editTradeId').value;
+    const selectedAccount = document.getElementById('tradeAccount').value;
+
+    const trade = {
+        id: editId ? parseInt(editId) : Date.now(),
+        isDraft: isDraft,
+        account: selectedAccount,
+        pair: pair,
+        direction: document.getElementById('direction').value,
+        entryTime: document.getElementById('entryTime').value,
+        exitTime: document.getElementById('exitTime').value,
+        outcome: document.getElementById('outcome').value,
+        riskAmount: parseFloat(document.getElementById('riskAmount').value) || 0,
+        initialRR: document.getElementById('initialRR').value,
+        actualR: parseFloat(document.getElementById('actualR').value) || 0,
+        pnlDollar: parseFloat(document.getElementById('pnlDollar').value) || 0,
+        pnlPercent: document.getElementById('pnlPercent').value,
+        setupGrade: document.getElementById('setupGrade').value,
+        reasoning: document.getElementById('reasoning').value,
+        entryPrice: parseFloat(document.getElementById('entryPrice').value) || 0,
+        stopPrice: parseFloat(document.getElementById('stopPrice').value) || 0,
+        worstPrice: document.getElementById('worstPrice').value,
+        bestPrice: document.getElementById('bestPrice').value,
+        didNothing: document.getElementById('didNothing').value,
+        demonTags: getSelectedTags('demonTags'),
+        exitPlan: document.getElementById('exitPlan').value,
+        processScore: parseInt(document.getElementById('processScore').value),
+        followedPlan: document.getElementById('followedPlan').value,
+        wrongAction: document.getElementById('wrongAction').value,
+        negCause: document.getElementById('negCause').value,
+        improvement: document.getElementById('improvement').value,
+        convictionScore: parseInt(document.getElementById('convictionScore').value),
+        trustFactors: document.getElementById('trustFactors').value,
+        emotionsPresent: document.getElementById('emotionsPresent').value,
+        emotionsBefore: getSelectedTags('emotionsBefore'),
+        emotionsDuring: getSelectedTags('emotionsDuring'),
+        emotionsAfter: getSelectedTags('emotionsAfter'),
+        afterExit: document.getElementById('afterExit').value,
+        exitLogical: document.getElementById('exitLogical').value,
+        manageDifferent: document.getElementById('manageDifferent').value
+    };
+
+    // Save to the selected account
+    if (!accounts[selectedAccount]) accounts[selectedAccount] = { name: 'Unknown', balance: 10000, trades: [] };
+
+    if (editId) {
+        const idx = accounts[selectedAccount].trades.findIndex(t => t.id === parseInt(editId));
+        if (idx !== -1) accounts[selectedAccount].trades[idx] = trade;
+        else accounts[selectedAccount].trades.push(trade);
+    } else {
+        accounts[selectedAccount].trades.push(trade);
+    }
+
+    if (selectedAccount === currentAccount) trades = accounts[currentAccount].trades;
+
+    // Save to Supabase
+    await saveTradeToDb(trade);
+    saveData();
+    hideTradeForm();
+    renderTrades();
+    updateDashboard();
+    console.log('Trade saved:', trade.id);    } finally {
+        isSavingTrade = false;
+    }
+
+}
+
+function editTrade(id) {
+    const trade = trades.find(t => t.id === id);
+    if (!trade) return;
+
+    document.getElementById('editTradeId').value = trade.id;
+    document.getElementById('pair').value = trade.pair || '';
+    document.getElementById('direction').value = trade.direction || 'LONG';
+    document.getElementById('entryTime').value = trade.entryTime || '';
+    document.getElementById('exitTime').value = trade.exitTime || '';
+    document.getElementById('outcome').value = trade.outcome || '';
+    document.getElementById('riskAmount').value = trade.riskAmount || '';
+    document.getElementById('initialRR').value = trade.initialRR || '';
+    document.getElementById('actualR').value = trade.actualR || '';
+    document.getElementById('pnlDollar').value = trade.pnlDollar || '';
+    document.getElementById('pnlPercent').value = trade.pnlPercent || '';
+    document.getElementById('setupGrade').value = trade.setupGrade || 'A';
+    document.getElementById('reasoning').value = trade.reasoning || '';
+    document.getElementById('entryPrice').value = trade.entryPrice || '';
+    document.getElementById('stopPrice').value = trade.stopPrice || '';
+    document.getElementById('worstPrice').value = trade.worstPrice || '';
+    document.getElementById('bestPrice').value = trade.bestPrice || '';
+    document.getElementById('didNothing').value = trade.didNothing || '';
+    document.getElementById('exitPlan').value = trade.exitPlan || '';
+    document.getElementById('processScore').value = trade.processScore || 5;
+    document.getElementById('processVal').innerText = trade.processScore || 5;
+    document.getElementById('followedPlan').value = trade.followedPlan || 'YES';
+    document.getElementById('wrongAction').value = trade.wrongAction || '';
+    document.getElementById('negCause').value = trade.negCause || '';
+    document.getElementById('improvement').value = trade.improvement || '';
+    document.getElementById('convictionScore').value = trade.convictionScore || 3;
+    document.getElementById('convictionVal').innerText = trade.convictionScore || 3;
+    document.getElementById('trustFactors').value = trade.trustFactors || '';
+    document.getElementById('emotionsPresent').value = trade.emotionsPresent || '';
+    document.getElementById('afterExit').value = trade.afterExit || '';
+    document.getElementById('exitLogical').value = trade.exitLogical || 'YES';
+    document.getElementById('manageDifferent').value = trade.manageDifferent || '';
+
+    document.querySelectorAll('.tag.selected').forEach(t => t.classList.remove('selected'));
+    (trade.demonTags || []).forEach(tag => {
+        const el = Array.from(document.querySelectorAll('#demonTags .tag')).find(t => t.textContent === tag);
+        if (el) el.classList.add('selected');
+    });
+    (trade.emotionsBefore || []).forEach(tag => {
+        const el = Array.from(document.querySelectorAll('#emotionsBefore .tag')).find(t => t.textContent === tag);
+        if (el) el.classList.add('selected');
+    });
+    (trade.emotionsDuring || []).forEach(tag => {
+        const el = Array.from(document.querySelectorAll('#emotionsDuring .tag')).find(t => t.textContent === tag);
+        if (el) el.classList.add('selected');
+    });
+    (trade.emotionsAfter || []).forEach(tag => {
+        const el = Array.from(document.querySelectorAll('#emotionsAfter .tag')).find(t => t.textContent === tag);
+        if (el) el.classList.add('selected');
+    });
+
+    calcMAE();
+    document.getElementById('tradeForm').style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function deleteTrade(id) {
+    if (!confirm('Delete this trade?')) return;
+    await deleteTradeFromDb(id);
+    trades = trades.filter(t => t.id !== id);
+    accounts[currentAccount].trades = trades;
+    saveData();
+    renderTrades();
+    updateDashboard();
+}
+
+function getWeekStart(dateStr) {
+    const date = new Date(dateStr);
+    const day = date.getDay();
+    const diff = date.getDate() - day + (day === 0 ? -6 : 1); // Adjust to Monday
+    const monday = new Date(date.setDate(diff));
+    return monday.toISOString().split('T')[0];
+}
+
+function formatWeekRange(mondayStr) {
+    const monday = new Date(mondayStr);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+
+    const options = { month: 'short', day: 'numeric' };
+    const startStr = monday.toLocaleDateString('en-US', options);
+    const endStr = sunday.toLocaleDateString('en-US', options);
+
+    return `WEEK OF ${startStr.toUpperCase()} - ${endStr.toUpperCase()}`;
+}
+
+function renderTrades() {
+    const list = document.getElementById('tradeList');
+    if (trades.length === 0) {
+        list.innerHTML = '<div style="text-align:center;color:#888;padding:40px;">NO TRADES</div>';
+        return;
+    }
+
+    // Group by week (Monday start)
+    const grouped = {};
+    trades.forEach(t => {
+        const date = t.exitTime || t.entryTime || new Date().toISOString().split('T')[0];
+        const weekStart = getWeekStart(date);
+        if (!grouped[weekStart]) grouped[weekStart] = [];
+        grouped[weekStart].push(t);
+    });
+
+    let html = '';
+    Object.keys(grouped).sort().reverse().forEach(weekStart => {
+        const weekLabel = formatWeekRange(weekStart);
+        html += `<div class="period-header">${weekLabel}</div>`;
+        grouped[weekStart].reverse().forEach(t => {
+            const outcomeClass = t.isDraft ? 'draft' : (t.outcome ? t.outcome.toLowerCase() : '');
+            const outcomeLabel = t.isDraft ? 'DRAFT' : (t.outcome === 'WIN' ? 'W' : t.outcome === 'LOSS' ? 'L' : 'BE');
+            html += `
+                <div class="trade-card ${outcomeClass}" onclick="this.classList.toggle('expanded')">
+                    <div class="trade-header">
+                        <span class="trade-ticker">${t.pair ? t.pair.split('/')[0] : 'NO PAIR'} - ${outcomeLabel}</span>
+                        <span style="color:${t.pnlDollar >= 0 ? '#0f0' : '#f00'}">
+                            ${t.pnlDollar >= 0 ? '+' : ''}$${t.pnlDollar || 0} (${t.actualR || 0}R)
+                        </span>
+                    </div>
+                    <div class="trade-meta">
+                        <span>${t.direction}</span>
+                        <span>PROC:${t.processScore || '-'}</span>
+                        <span>CONV:${t.convictionScore || '-'}</span>
+                        <span>GRADE:${t.setupGrade || '-'}</span>
+                    </div>
+                    <div class="trade-details">
+                        <div class="detail-row"><span class="detail-label">ENTRY:</span> <span class="detail-value">${t.entryTime || '-'}</span></div>
+                        <div class="detail-row"><span class="detail-label">EXIT:</span> <span class="detail-value">${t.exitTime || '-'}</span></div>
+                        <div class="detail-row"><span class="detail-label">RISK:</span> <span class="detail-value">$${t.riskAmount || 0}</span></div>
+                        <div class="detail-row"><span class="detail-label">REASONING:</span> <span class="detail-value">${t.reasoning || '-'}</span></div>
+                        <div class="detail-row"><span class="detail-label">EXIT PLAN:</span> <span class="detail-value">${t.exitPlan || '-'}</span></div>
+                        <div class="detail-row"><span class="detail-label">DEMONS:</span> <span class="detail-value">${(t.demonTags || []).join(', ') || '-'}</span></div>
+                        <div class="detail-row"><span class="detail-label">FOLLOWED PLAN:</span> <span class="detail-value">${t.followedPlan || '-'}</span></div>
+                        <div class="detail-row"><span class="detail-label">WHAT WRONG:</span> <span class="detail-value">${t.wrongAction || '-'}</span></div>
+                        <div class="detail-row"><span class="detail-label">IMPROVEMENT:</span> <span class="detail-value">${t.improvement || '-'}</span></div>
+                        <div class="detail-row"><span class="detail-label">TRUST FACTORS:</span> <span class="detail-value">${t.trustFactors || '-'}</span></div>
+                        <div class="detail-row"><span class="detail-label">AFTER EXIT:</span> <span class="detail-value">${t.afterExit || '-'}</span></div>
+                        <div style="margin-top:10px;display:flex;gap:10px;">
+                            <button onclick="event.stopPropagation();editTrade(${t.id})">EDIT</button>
+                            <button class="btn-danger" onclick="event.stopPropagation();deleteTrade(${t.id})">DELETE</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+    });
+    list.innerHTML = html;
+}
+
+// ========== DASHBOARD ==========
+function setFilter(filter, btn) {
+    currentFilter = filter;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    updateDashboard();
+}
+
+function filterTrades() {
+    const now = new Date();
+    return trades.filter(t => {
+        if (t.isDraft) return false;
+        const date = new Date(t.exitTime || t.entryTime);
+        if (isNaN(date)) return currentFilter === 'all';
+        if (currentFilter === 'week') return date >= new Date(now - 7*24*60*60*1000);
+        if (currentFilter === 'month') return date >= new Date(now - 30*24*60*60*1000);
+        if (currentFilter === 'quarter') return date >= new Date(now - 90*24*60*60*1000);
+        return true;
+    });
+}
+
+function updateDashboard() {
+    const filtered = filterTrades();
+    const balance = accounts[currentAccount]?.balance || 10000;
+
+    if (filtered.length === 0) {
+        document.getElementById('statsGrid').innerHTML = `
+            <div class="stat-box"><div class="stat-label">WIN RATE</div><div class="stat-value">--</div></div>
+            <div class="stat-box"><div class="stat-label">FACTOR RATE</div><div class="stat-value">--</div></div>
+            <div class="stat-box"><div class="stat-label">TOTAL PNL</div><div class="stat-value">--</div></div>
+            <div class="stat-box"><div class="stat-label">SHARPE</div><div class="stat-value">--</div></div>
+            <div class="stat-box"><div class="stat-label">PROCESS</div><div class="stat-value">--</div></div>
+            <div class="stat-box"><div class="stat-label">CONVICTION</div><div class="stat-value">--</div></div>
+            <div class="stat-box"><div class="stat-label">TRADES</div><div class="stat-value">0</div></div>
+            <div class="stat-box"><div class="stat-label">LONG/SHORT</div><div class="stat-value">--</div></div>
+        `;
+        document.getElementById('insightsContainer').innerHTML = '<div style="color:#888;padding:10px;">ADD 3+ TRADES FOR INSIGHTS</div>';
+        document.getElementById('tickerGrid').innerHTML = '<div style="color:#888;">NO DATA</div>';
+        drawChart([]);
+        return;
+    }
+
+    const wins = filtered.filter(t => t.outcome === 'WIN').length;
+    const losses = filtered.filter(t => t.outcome === 'LOSS').length;
+    const wr = ((wins / filtered.length) * 100).toFixed(1);
+    const avgR = (filtered.reduce((s, t) => s + (t.actualR || 0), 0) / filtered.length).toFixed(2);
+    const totalPnl = filtered.reduce((s, t) => s + (t.pnlDollar || 0), 0);
+    const pnlPct = ((totalPnl / balance) * 100).toFixed(2);
+
+    const returns = filtered.map(t => t.actualR || 0);
+    const avgReturn = returns.reduce((a, b) => a + b, 0) / returns.length;
+    const stdDev = Math.sqrt(returns.map(r => Math.pow(r - avgReturn, 2)).reduce((a, b) => a + b, 0) / returns.length);
+    const sharpe = stdDev > 0 ? (avgReturn / stdDev).toFixed(2) : 0;
+
+    const avgProcess = (filtered.reduce((s, t) => s + (t.processScore || 0), 0) / filtered.length).toFixed(1);
+    const avgConviction = (filtered.reduce((s, t) => s + (t.convictionScore || 0), 0) / filtered.length).toFixed(1);
+
+    const longs = filtered.filter(t => t.direction === 'LONG').length;
+    const shorts = filtered.length - longs;
+    const longPct = ((longs / filtered.length) * 100).toFixed(0);
+
+    const largerPct = Math.max(longPct, 100 - longPct);
+    const largerLabel = longPct >= 50 ? 'L' : 'S';
+
+    document.getElementById('statsGrid').innerHTML = `
+        <div class="stat-box"><div class="stat-label">WIN RATE</div><div class="stat-value">${wr}%</div><div class="stat-meta">${wins}W / ${losses}L</div></div>
+        <div class="stat-box clickable" onclick="showFactorRateModal()"><div class="stat-label">FACTOR RATE</div><div class="stat-value">${avgR}R</div><div class="stat-meta">CLICK FOR DETAIL</div></div>
+        <div class="stat-box"><div class="stat-label">TOTAL PNL</div><div class="stat-value" style="color:${totalPnl>=0?'#0f0':'#f00'}">${totalPnl>=0?'+':''}$${totalPnl.toFixed(0)}</div><div class="stat-meta">${pnlPct}%</div></div>
+        <div class="stat-box"><div class="stat-label">SHARPE</div><div class="stat-value">${sharpe}</div></div>
+        <div class="stat-box"><div class="stat-label">PROCESS</div><div class="stat-value">${avgProcess}</div></div>
+        <div class="stat-box"><div class="stat-label">CONVICTION</div><div class="stat-value">${avgConviction}</div></div>
+        <div class="stat-box"><div class="stat-label">TRADES</div><div class="stat-value">${filtered.length}</div></div>
+        <div class="stat-box"><div class="stat-label">LONG/SHORT</div>${drawRatioRing(largerPct, largerLabel)}<div class="stat-meta">${longs}L / ${shorts}S</div></div>
+    `;
+
+    // Store filtered trades for modal access
+    window.currentFilteredTrades = filtered;
+
+    generateInsights(filtered);
+    generateTickerGrid(filtered);
+    drawChart(filtered);
+}
+
+function generateInsights(filtered) {
+    let html = '';
+    const wins = filtered.filter(t => t.outcome === 'WIN');
+    const losses = filtered.filter(t => t.outcome === 'LOSS');
+    const overallWR = filtered.length > 0 ? (wins.length / filtered.length * 100).toFixed(0) : 0;
+
+    // === EDGE DETECTION ===
+    html += '<div style="margin-bottom:10px;font-size:10px;color:#0f0;border-bottom:1px solid #333;padding-bottom:5px;">EDGE ANALYSIS</div>';
+
+    // Grade A Analysis
+    const gradeA = filtered.filter(t => t.setupGrade === 'A');
+    if (gradeA.length >= 2) {
+        const wr = ((gradeA.filter(t => t.outcome === 'WIN').length / gradeA.length) * 100).toFixed(0);
+        const avgR = (gradeA.reduce((s, t) => s + (t.actualR || 0), 0) / gradeA.length).toFixed(2);
+        const isEdge = wr > overallWR;
+        html += `<div class="insight" style="border-left-color:${isEdge ? '#0f0' : '#888'}"><div class="insight-title">${isEdge ? '[EDGE]' : ''} GRADE A SETUPS</div><div class="insight-text">${wr}% WR | ${avgR}R avg | ${gradeA.length} trades</div></div>`;
+    }
+
+    // High Conviction Analysis
+    const highConv = filtered.filter(t => t.convictionScore >= 4);
+    const lowConv = filtered.filter(t => t.convictionScore <= 2);
+    if (highConv.length >= 2) {
+        const highWR = ((highConv.filter(t => t.outcome === 'WIN').length / highConv.length) * 100).toFixed(0);
+        const highAvgR = (highConv.reduce((s, t) => s + (t.actualR || 0), 0) / highConv.length).toFixed(2);
+        const isEdge = highWR > overallWR;
+        html += `<div class="insight" style="border-left-color:${isEdge ? '#0f0' : '#888'}"><div class="insight-title">${isEdge ? '[EDGE]' : ''} HIGH CONVICTION (4-5)</div><div class="insight-text">${highWR}% WR | ${highAvgR}R avg | ${highConv.length} trades</div></div>`;
+    }
+
+    // High Process Analysis
+    const highProc = filtered.filter(t => t.processScore >= 8);
+    if (highProc.length >= 2) {
+        const wr = ((highProc.filter(t => t.outcome === 'WIN').length / highProc.length) * 100).toFixed(0);
+        const avgR = (highProc.reduce((s, t) => s + (t.actualR || 0), 0) / highProc.length).toFixed(2);
+        const isEdge = wr > overallWR;
+        html += `<div class="insight" style="border-left-color:${isEdge ? '#0f0' : '#888'}"><div class="insight-title">${isEdge ? '[EDGE]' : ''} HIGH PROCESS (8-10)</div><div class="insight-text">${wr}% WR | ${avgR}R avg | ${highProc.length} trades</div></div>`;
+    }
+
+    // Direction Analysis
+    const longs = filtered.filter(t => t.direction === 'LONG');
+    const shorts = filtered.filter(t => t.direction === 'SHORT');
+    if (longs.length >= 2 && shorts.length >= 2) {
+        const longWR = ((longs.filter(t => t.outcome === 'WIN').length / longs.length) * 100).toFixed(0);
+        const shortWR = ((shorts.filter(t => t.outcome === 'WIN').length / shorts.length) * 100).toFixed(0);
+        const betterDir = longWR > shortWR ? 'LONG' : 'SHORT';
+        const diff = Math.abs(longWR - shortWR);
+        if (diff >= 10) {
+            html += `<div class="insight" style="border-left-color:#0f0"><div class="insight-title">[EDGE] ${betterDir} BIAS</div><div class="insight-text">LONG: ${longWR}% WR | SHORT: ${shortWR}% WR | ${diff}% difference</div></div>`;
+        }
+    }
+
+    // === LEAK DETECTION ===
+    html += '<div style="margin:15px 0 10px 0;font-size:10px;color:#f00;border-bottom:1px solid #333;padding-bottom:5px;">LEAK ANALYSIS</div>';
+
+    // Demon Analysis - Find costly demons
+    const demonPnL = {};
+    filtered.forEach(t => {
+        (t.demonTags || []).forEach(d => {
+            if (!demonPnL[d]) demonPnL[d] = { count: 0, pnl: 0, losses: 0 };
+            demonPnL[d].count++;
+            demonPnL[d].pnl += t.pnlDollar || 0;
+            if (t.outcome === 'LOSS') demonPnL[d].losses++;
+        });
+    });
+
+    const worstDemons = Object.entries(demonPnL).sort((a, b) => a[1].pnl - b[1].pnl);
+    if (worstDemons.length > 0 && worstDemons[0][1].pnl < 0) {
+        const [demon, data] = worstDemons[0];
+        html += `<div class="insight" style="border-left-color:#f00"><div class="insight-title">[LEAK] ${demon}</div><div class="insight-text">${data.count} trades | $${data.pnl.toFixed(0)} P/L | ${data.losses} losses</div></div>`;
+    }
+
+    // Conviction Inverse Warning
+    if (highConv.length >= 2 && lowConv.length >= 2) {
+        const highWR = (highConv.filter(t => t.outcome === 'WIN').length / highConv.length * 100);
+        const lowWR = (lowConv.filter(t => t.outcome === 'WIN').length / lowConv.length * 100);
+        if (lowWR > highWR + 10) {
+            html += `<div class="insight" style="border-left-color:#f00"><div class="insight-title">[LEAK] CONVICTION INVERSE</div><div class="insight-text">Low conviction (${lowWR.toFixed(0)}% WR) outperforms high conviction (${highWR.toFixed(0)}% WR)</div></div>`;
+        }
+    }
+
+    // Low Process Analysis
+    const lowProc = filtered.filter(t => t.processScore <= 4);
+    if (lowProc.length >= 2) {
+        const wr = ((lowProc.filter(t => t.outcome === 'WIN').length / lowProc.length) * 100).toFixed(0);
+        const totalLoss = lowProc.reduce((s, t) => s + (t.pnlDollar < 0 ? t.pnlDollar : 0), 0);
+        if (wr < overallWR) {
+            html += `<div class="insight" style="border-left-color:#f00"><div class="insight-title">[LEAK] LOW PROCESS (1-4)</div><div class="insight-text">${wr}% WR | $${totalLoss.toFixed(0)} lost | ${lowProc.length} trades</div></div>`;
+        }
+    }
+
+    // Followed Plan Analysis
+    const notFollowed = filtered.filter(t => t.followedPlan === 'NO');
+    if (notFollowed.length >= 2) {
+        const wr = ((notFollowed.filter(t => t.outcome === 'WIN').length / notFollowed.length) * 100).toFixed(0);
+        const totalLoss = notFollowed.reduce((s, t) => s + (t.pnlDollar || 0), 0);
+        html += `<div class="insight" style="border-left-color:#ff0"><div class="insight-title">[WARNING] PLAN DEVIATION</div><div class="insight-text">${notFollowed.length} trades didn't follow plan | ${wr}% WR | $${totalLoss.toFixed(0)}</div></div>`;
+    }
+
+    // Grade F/D Analysis
+    const lowGrade = filtered.filter(t => t.setupGrade === 'D' || t.setupGrade === 'F');
+    if (lowGrade.length >= 2) {
+        const wr = ((lowGrade.filter(t => t.outcome === 'WIN').length / lowGrade.length) * 100).toFixed(0);
+        const totalPnl = lowGrade.reduce((s, t) => s + (t.pnlDollar || 0), 0);
+        html += `<div class="insight" style="border-left-color:#f00"><div class="insight-title">[LEAK] LOW GRADE SETUPS (D/F)</div><div class="insight-text">${wr}% WR | $${totalPnl.toFixed(0)} P/L | ${lowGrade.length} trades</div></div>`;
+    }
+
+    // Time of Day Analysis (if enough data)
+    const morningTrades = filtered.filter(t => {
+        const h = new Date(t.entryTime).getHours();
+        return h >= 9 && h < 12;
+    });
+    const afternoonTrades = filtered.filter(t => {
+        const h = new Date(t.entryTime).getHours();
+        return h >= 12 && h < 16;
+    });
+
+    document.getElementById('insightsContainer').innerHTML = html || '<div style="color:#888;padding:10px;">Add 3+ trades for AI analysis</div>';
+}
+
+function generateTickerGrid(filtered) {
+    const tickers = {};
+    filtered.forEach(t => {
+        const ticker = (t.pair || '').split('/')[0] || 'UNKNOWN';
+        if (!tickers[ticker]) tickers[ticker] = { wins: 0, losses: 0, pnl: 0, r: 0, long: 0, short: 0 };
+        if (t.outcome === 'WIN') tickers[ticker].wins++;
+        if (t.outcome === 'LOSS') tickers[ticker].losses++;
+        tickers[ticker].pnl += t.pnlDollar || 0;
+        tickers[ticker].r += t.actualR || 0;
+        if (t.direction === 'LONG') tickers[ticker].long++;
+        if (t.direction === 'SHORT') tickers[ticker].short++;
+    });
+
+    document.getElementById('tickerGrid').innerHTML = Object.entries(tickers)
+        .sort((a, b) => b[1].pnl - a[1].pnl)
+        .map(([ticker, data]) => {
+            const total = data.wins + data.losses;
+            const wr = total > 0 ? ((data.wins / total) * 100).toFixed(0) : 0;
+            const avgR = total > 0 ? (data.r / total).toFixed(1) : 0;
+            const longPct = total > 0 ? ((data.long / total) * 100).toFixed(0) : 0;
+            const shortPct = 100 - longPct;
+            return `
+                <div class="ticker-box ${data.pnl >= 0 ? 'positive' : 'negative'}" onclick="toggleTickerDetails('${ticker}')" id="ticker-${ticker}">
+                    <div class="ticker-main">${ticker}<br><span style="font-size:10px;">${data.pnl>=0?'+':''}$${data.pnl.toFixed(0)}</span></div>
+                    <div class="ticker-details">
+                        <div>WR: ${wr}% (${data.wins}W-${data.losses}L)</div>
+                        <div>AVG R: ${avgR}</div>
+                        <div>PNL: ${data.pnl >= 0 ? '+' : ''}$${data.pnl.toFixed(0)}</div>
+                        <div>LONG: ${longPct}% | SHORT: ${shortPct}%</div>
+                    </div>
+                </div>
+            `;
+        }).join('') || '<div style="color:#888;">NO DATA</div>';
+}
+
+function toggleTickerDetails(ticker) {
+    const box = document.getElementById(`ticker-${ticker}`);
+    if (box) box.classList.toggle('expanded');
+}
+
+function drawChart(filtered) {
+    const canvas = document.getElementById('equityChart');
+    const ctx = canvas.getContext('2d');
+    const container = document.getElementById('chartContainer');
+    const width = container.offsetWidth;
+    const height = 220;
+    canvas.width = width;
+    canvas.height = height;
+
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, width, height);
+
+    const balance = accounts[currentAccount]?.balance || 10000;
+    const padding = 50;
+    const rightPadding = 100;
+
+    if (filtered.length === 0) {
+        ctx.strokeStyle = '#333';
+        ctx.beginPath();
+        ctx.moveTo(padding, height/2);
+        ctx.lineTo(width-20, height/2);
+        ctx.stroke();
+        ctx.fillStyle = '#fff';
+        ctx.font = '10px Courier New';
+        ctx.fillText('$' + balance, 5, height/2 + 4);
+        chartPoints = [];
+        return;
+    }
+
+    const sorted = [...filtered].sort((a, b) => new Date(a.exitTime || a.entryTime) - new Date(b.exitTime || b.entryTime));
+
+    let equity = 0;
+    chartPoints = [{ x: padding, y: height/2, bal: balance, pnl: 0, date: 'START' }];
+    sorted.forEach((t, i) => {
+        equity += t.pnlDollar || 0;
+        chartPoints.push({
+            x: padding + ((i+1) / sorted.length) * (width - padding - rightPadding),
+            bal: balance + equity,
+            pnl: equity,
+            date: t.exitTime || t.entryTime,
+            trade: t
+        });
+    });
+
+    const allBals = chartPoints.map(p => p.bal);
+    const maxBal = Math.max(...allBals);
+    const minBal = Math.min(...allBals);
+    const range = maxBal - minBal || balance * 0.1;
+
+    chartPoints.forEach(p => { p.y = height - 25 - ((p.bal - minBal) / range) * (height - 50); });
+
+    // Grid and Y-axis labels
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 0.5;
+    ctx.fillStyle = '#fff';
+    ctx.font = '9px Courier New';
+    ctx.textAlign = 'right';
+    for (let i = 0; i <= 4; i++) {
+        const val = minBal + (i * range / 4);
+        const y = height - 25 - (i * (height - 50) / 4);
+        ctx.beginPath();
+        ctx.moveTo(padding, y);
+        ctx.lineTo(width - rightPadding, y);
+        ctx.stroke();
+        ctx.fillText('$' + val.toFixed(0), padding - 5, y + 3);
+    }
+
+    // Baseline
+    const baseY = height - 25 - ((balance - minBal) / range) * (height - 50);
+    ctx.strokeStyle = '#555';
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.moveTo(padding, baseY);
+    ctx.lineTo(width - rightPadding, baseY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Curve with color per segment
+    ctx.lineWidth = 2;
+    for (let i = 0; i < chartPoints.length - 1; i++) {
+        const p1 = chartPoints[i];
+        const p2 = chartPoints[i + 1];
+        ctx.strokeStyle = p2.pnl >= 0 ? '#1e3a8a' : '#fb923c';
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+    }
+
+    // Final PNL label - positioned in right padding area
+    const final = chartPoints[chartPoints.length - 1];
+    const pnlPct = ((final.pnl / balance) * 100).toFixed(1);
+    ctx.fillStyle = equity >= 0 ? '#0f0' : '#f00';
+    ctx.font = 'bold 11px Courier New';
+    ctx.textAlign = 'left';
+    const pnlText = `${equity>=0?'+':''}$${equity.toFixed(0)}`;
+    const pctText = `(${pnlPct>=0?'+':''}${pnlPct}%)`;
+    ctx.fillText(pnlText, final.x + 8, final.y - 2);
+    ctx.font = '9px Courier New';
+    ctx.fillStyle = '#888';
+    ctx.fillText(pctText, final.x + 8, final.y + 10);
+
+    // X-axis date labels
+    ctx.fillStyle = '#fff';
+    ctx.font = '9px Courier New';
+    ctx.textAlign = 'center';
+
+    if (chartPoints.length > 1) {
+        let datePoints = [];
+        const numLabels = currentFilter === 'week' ? 7 : currentFilter === 'month' ? 10 : 8;
+        const step = Math.max(1, Math.floor((chartPoints.length - 1) / numLabels));
+        datePoints = chartPoints.filter((p, i) => i > 0 && i % step === 0);
+
+        if (!datePoints.includes(chartPoints[chartPoints.length - 1])) {
+            datePoints.push(chartPoints[chartPoints.length - 1]);
+        }
+
+        datePoints.forEach(p => {
+            if (p.date && p.date !== 'START') {
+                const date = new Date(p.date);
+                if (!isNaN(date)) {
+                    const m = date.getMonth() + 1;
+                    const d = date.getDate();
+                    const dateStr = `${m}/${d}`;
+                    ctx.fillText(dateStr, p.x, height - 3);
+
+                    // Tick mark
+                    ctx.strokeStyle = '#555';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(p.x, height - 28);
+                    ctx.lineTo(p.x, height - 18);
+                    ctx.stroke();
+                }
+            }
+        });
+    }
+}
+
+// Chart hover tooltip
+document.addEventListener('DOMContentLoaded', function() {
+    const chart = document.getElementById('equityChart');
+    const tooltip = document.getElementById('chartTooltip');
+
+    chart.addEventListener('mousemove', function(e) {
+        const rect = this.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+
+        if (chartPoints.length < 2) {
+            tooltip.style.display = 'none';
+            return;
+        }
+
+        let closest = chartPoints[0];
+        let minDist = Math.abs(x - closest.x);
+
+        for (let p of chartPoints) {
+            const dist = Math.abs(x - p.x);
+            if (dist < minDist) {
+                minDist = dist;
+                closest = p;
+            }
+        }
+
+        if (minDist < 30) {
+            const balance = accounts[currentAccount]?.balance || 10000;
+            const pnlPct = ((closest.pnl / balance) * 100).toFixed(1);
+            let dateStr = closest.date;
+            if (closest.date && closest.date !== 'START') {
+                const d = new Date(closest.date);
+                if (!isNaN(d)) {
+                    dateStr = d.toLocaleDateString();
+                }
+            }
+            tooltip.innerHTML = `
+                <div><strong>${dateStr}</strong></div>
+                <div>BAL: $${closest.bal.toFixed(0)}</div>
+                <div>P/L: ${closest.pnl >= 0 ? '+' : ''}$${closest.pnl.toFixed(0)} (${pnlPct}%)</div>
+            `;
+            tooltip.style.left = (closest.x - 50) + 'px';
+            tooltip.style.top = (closest.y - 60) + 'px';
+            tooltip.style.display = 'block';
+        } else {
+            tooltip.style.display = 'none';
+        }
+    });
+
+    chart.addEventListener('mouseleave', function() {
+        tooltip.style.display = 'none';
+    });
+});
+
+// ========== WEEKLY ==========
+function addWeekEntry() {
+    // Create calendar picker overlay
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:9998;display:flex;align-items:center;justify-content:center;';
+
+    const picker = document.createElement('div');
+    picker.style.cssText = 'background:#000;border:2px solid #fff;padding:20px;text-align:center;';
+    picker.innerHTML = `
+        <div style="margin-bottom:15px;font-size:14px;font-weight:bold;">SELECT WEEK START DATE</div>
+        <input type="date" id="weekDatePicker" style="background:#000;border:1px solid #fff;color:#fff;padding:10px;font-size:14px;font-family:'Courier New',monospace;cursor:pointer;">
+        <div style="margin-top:15px;display:flex;gap:10px;justify-content:center;">
+            <button onclick="confirmWeekDate()" style="padding:8px 20px;">CREATE</button>
+            <button onclick="closeWeekPicker()" class="btn-secondary" style="padding:8px 20px;">CANCEL</button>
+        </div>
+    `;
+
+    overlay.id = 'weekPickerOverlay';
+    overlay.appendChild(picker);
+    document.body.appendChild(overlay);
+
+    const dateInput = document.getElementById('weekDatePicker');
+    dateInput.focus();
+    if (dateInput.showPicker) {
+        setTimeout(() => dateInput.showPicker(), 100);
+    }
+}
+
+async function confirmWeekDate() {
+    const dateInput = document.getElementById('weekDatePicker');
+    if (!dateInput.value) {
+        alert('Please select a date');
+        return;
+    }
+
+    // Get the Monday of the selected week
+    const selected = new Date(dateInput.value);
+    const day = selected.getDay();
+    const diff = selected.getDate() - day + (day === 0 ? -6 : 1); // Adjust to Monday
+    const monday = new Date(selected.setDate(diff));
+    const weekOf = monday.toISOString().split('T')[0];
+
+    // Get dates for each day of the week
+    const days = {};
+    const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    dayNames.forEach((dayName, i) => {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        days[dayName] = { text: '', date: d.toISOString().split('T')[0] };
+    });
+
+    const entry = {
+        id: Date.now(),
+        weekOf: weekOf,
+        days: days,
+        bias: { ticker: '', direction: '', verified: null, priceChange: null }
+    };
+
+    weeklyEntries.unshift(entry);
+    await saveWeeklyToDb(entry);
+    saveData();
+    renderWeekly();
+    closeWeekPicker();
+}
+
+function closeWeekPicker() {
+    const overlay = document.getElementById('weekPickerOverlay');
+    if (overlay) overlay.remove();
+}
+
+function toggleWeeklyDay(weekId, day) {
+    const el = document.getElementById(`day-${weekId}-${day}`);
+    if (el) el.classList.toggle('open');
+}
+
+async function saveWeeklyDay(weekId, day, value) {
+    const entry = weeklyEntries.find(e => e.id === weekId);
+    if (entry) {
+        // Handle both old format (string) and new format (object with text/date)
+        if (typeof entry.days[day] === 'object') {
+            entry.days[day].text = value;
+        } else {
+            entry.days[day] = value;
+        }
+        await saveWeeklyToDb(entry);
+        saveData();
+    }
+}
+
+async function deleteWeekEntry(id) {
+    if (!confirm('Delete this week?')) return;
+    await deleteWeeklyFromDb(id);
+    weeklyEntries = weeklyEntries.filter(w => w.id !== id);
+    saveData();
+    renderWeekly();
+}
+
+function formatDayDate(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function renderWeekly() {
+    const list = document.getElementById('weeklyList');
+    if (weeklyEntries.length === 0) {
+        list.innerHTML = '<div style="text-align:center;color:#888;padding:40px;">NO WEEKLY ENTRIES</div>';
+        return;
+    }
+
+    const dayOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+
+    list.innerHTML = weeklyEntries.map(entry => {
+        return `
+            <div class="form-box">
+                <div class="week-header">
+                    <h3>WEEK OF: ${entry.weekOf}</h3>
+                    <button class="delete-week-btn" onclick="deleteWeekEntry(${entry.id})">X</button>
+                </div>
+
+                ${dayOrder.map(day => {
+                    const dayData = entry.days[day];
+                    const isObject = typeof dayData === 'object';
+                    const text = isObject ? (dayData?.text || '') : (dayData || '');
+                    const date = isObject ? dayData?.date : null;
+                    const dateLabel = date ? ` - ${formatDayDate(date)}` : '';
+                    return `
+                        <div class="day-toggle" id="day-${entry.id}-${day}">
+                            <div class="day-header" onclick="toggleWeeklyDay(${entry.id}, '${day}')">
+                                ${day.toUpperCase()}<span style="color:#888;font-weight:normal;margin-left:10px;">${dateLabel}</span>
+                            </div>
+                            <div class="day-content">
+                                <textarea style="width:100%;min-height:100px;"
+                                    onchange="saveWeeklyDay(${entry.id}, '${day}', this.value)"
+                                    placeholder="Write your ${day} journal entry...">${text}</textarea>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+    }).join('');
+}
+
+// ========== RESIZE ==========
+window.addEventListener('resize', () => {
+    const filtered = filterTrades();
+    drawChart(filtered);
+});
+
+// ========== START ==========
+// ========== START ==========
+(function startTerminal(){
+    function runOnce(){
+        if (window.__terminal_inited) return;
+        window.__terminal_inited = true;
+        if (typeof init === 'function') init();
+        else console.error('init() not found');
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', runOnce);
+    } else {
+        runOnce();
+    }
+})();
+</script>
+</body>
+</html>
